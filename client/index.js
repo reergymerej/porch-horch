@@ -19,7 +19,8 @@ process.stdin.on('data', (data) => {
     process.stdout.write(data)
   })
 
-  server.stdin.write(`LSP-request-placeholder: ${data}`)
+  // server.stdin.write(`LSP-request-placeholder: ${data}`)
+  server.stdin.write(data)
 })
 
 console.log('client is ready for commands')

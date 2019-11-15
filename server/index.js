@@ -5,17 +5,16 @@
 
 const child_process = require('child_process')
 const path = require('path')
-const toolPath = path.resolve(__dirname, '../tool/index.js')
+const toolCommand = path.resolve(__dirname, '../tool/index.js')
+// const toolCommand = "ls"
 
 const runTool = (input, done) => {
   // We're spawning to show that we could work with non-js too.
-  const tool = child_process.spawn(toolPath, [input])
+  const tool = child_process.spawn(toolCommand, [input])
 
   const chunks = []
-  tool.stdout.on('data', (data) => {
-    chunks.push(data)
-  })
-
+  tool.stdout.on('data', (data) => chunks.push(data))
+  tool.stderr.on('data', (data) => console.log(data.toString()))
   tool.on('exit', () => {
     const result = Buffer.concat(chunks)
     done(result)
