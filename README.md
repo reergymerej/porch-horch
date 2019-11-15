@@ -18,3 +18,10 @@ Tell the client to do something for you by sending something into stdin.  It
 responds to anything.
 
 The client will show the result in stdout.
+
+## Client Commands
+
+* start server
+* stop server
+* Anything else will be sent to the server.
+

@@ -11,16 +11,38 @@ const path = require('path')
 // Again, use spawn to separate Node relationship.  This could be on a remote
 // machine for all we care.
 const serverPath = path.resolve(__dirname, '../server/index.js')
-const server = child_process.spawn(serverPath)
+let server
+
+const startServer = () => {
+  server = child_process.spawn(serverPath)
+  process.stdout.write('server started\n')
+  server.on('exit', () => {
+    server = null
+    process.stdout.write('server exited\n')
+  })
+}
 
 process.stdin.on('data', (data) => {
-  // Talk to the server.
-  server.stdout.once('data', (data) => {
-    process.stdout.write(data)
-  })
+  switch(data.toString()) {
+    case 'start server\n':
+      startServer()
+      break
 
-  // server.stdin.write(`LSP-request-placeholder: ${data}`)
-  server.stdin.write(data)
+    case 'stop server\n':
+      server.kill()
+      break
+
+    default:
+      if (!server) {
+        startServer()
+      }
+      server.stdout.once('data', (data) => {
+        process.stdout.write(data)
+      })
+
+      // server.stdin.write(`LSP-request-placeholder: ${data}`)
+      server.stdin.write(data)
+  }
 })
 
 console.log('client is ready for commands')
