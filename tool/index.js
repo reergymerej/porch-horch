@@ -3,4 +3,7 @@
 // This is the "smartness."
 // It will communicate as all great programs do, throught text in STDIO.
 
-process.stdout.write(`Hello @${Date.now()}.\n`)
+const input = process.argv[2]
+process.stdout.write(`@${Date.now()}
+  I heard you say "${input}".
+`)

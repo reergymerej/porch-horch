@@ -7,9 +7,9 @@ const child_process = require('child_process')
 const path = require('path')
 const toolPath = path.resolve(__dirname, '../tool/index.js')
 
-const runTool = (done) => {
+const runTool = (input, done) => {
   // We're spawning to show that we could work with non-js too.
-  const tool = child_process.spawn(toolPath)
+  const tool = child_process.spawn(toolPath, [input])
 
   const chunks = []
   tool.stdout.on('data', (data) => {
@@ -22,11 +22,10 @@ const runTool = (done) => {
   })
 }
 
-process.stdin.on('data', () => {
+process.stdin.on('data', (data) => {
   // I respond to anything.
-  runTool((result) => {
+  const input = data.toString().trim()
+  runTool(input, (result) => {
     process.stdout.write(result)
   })
 })
-
-console.log('server listening on stdin')
