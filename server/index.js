@@ -5,6 +5,8 @@
 
 const child_process = require('child_process')
 const path = require('path')
+const message = require('../message')
+
 const toolCommand = path.resolve(__dirname, '../tool/index.js')
 // const toolCommand = "ls"
 
@@ -25,6 +27,7 @@ process.stdin.on('data', (data) => {
   // I respond to anything.
   const input = data.toString().trim()
   runTool(input, (result) => {
-    process.stdout.write(result)
+    const m = message(result.toString())
+    process.stdout.write(m)
   })
 })
