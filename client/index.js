@@ -15,57 +15,60 @@ const jsonrpc = require('../jsonrpc')
 const serverPath = path.resolve(__dirname, '../server/index.js')
 let server
 
-const showHelp = () => {
-  const message =
+const showHelp = () => console.log(
 `
-You can issue the following commands:
+  You can issue the following commands:
 
 * (s)tart server - start the LSP server
 * (st)op server - stop the server
 * (r)estart server
 * (i)nitialize
+`)
 
-`
+const logMessage = (label) => (message) => {
+  const line = '----------------------'
+  console.log(`${line}\n${label}\n${line}`)
   console.log(message)
 }
 
-const messageServer = (message) => {
+const logInbound = logMessage('client <- server')
+const logOutbound = logMessage('client -> server')
+
+const sendMessage = (message) => {
   if (server) {
     server.stdin.write(message)
-    console.log('client -> server\n----------')
-    console.log(message)
-    console.log('----------')
+    logOutbound(message)
   }
 }
 
 const notify = (method, params) => {
-  messageServer(
-    message(jsonrpc.notification(method, params))
+  sendMessage(
+    message.stringify(jsonrpc.notification(method, params))
   )
 }
 
 let requestId = 0
 
 const request = (method, params) => {
-  messageServer(
-    message(jsonrpc.request(method, params, requestId++))
+  sendMessage(
+    message.stringify(jsonrpc.request(method, params, requestId++))
   )
 }
 
 const startServer = () => {
   server = child_process.spawn(serverPath)
-  console.log('server started')
+  console.log('> server started')
   server.stderr.pipe(process.stderr)
-  // server.stderr.on('data', (data) => {
-  //   process.stderr.write('server error', { error: data.toString() })
-  // })
+  server.stderr.on('data', (data) => {
+    console.error('> server error', { error: data.toString() })
+  })
   server.on('exit', (code) => {
     server = null
-    console.log('server exited', { code })
+    console.log('> server exited', { code })
   })
 
   server.stdout.on('data', (data) => {
-    console.log('server said', data.toString())
+    logInbound(data.toString())
   })
 }
 
