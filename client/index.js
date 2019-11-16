@@ -22,6 +22,7 @@ You can issue the following commands:
 
 * (s)tart server - start the LSP server
 * (st)op server - stop the server
+* (r)estart server
 * (i)nitialize
 
 `
@@ -62,16 +63,31 @@ const startServer = () => {
     server = null
     console.log('server exited', { code })
   })
+
+  server.stdout.on('data', (data) => {
+    console.log('server said', data.toString())
+  })
 }
 
 process.stdin.on('data', (data) => {
   switch(data.toString().trim()) {
     case 's':
-      startServer()
+      if (!server) {
+        startServer()
+      }
       break
 
     case 'st':
       if (server) {
+        server.kill()
+      }
+      break
+
+    case 'r':
+      if (server) {
+        server.on('exit', () => {
+          startServer()
+        })
         server.kill()
       }
       break

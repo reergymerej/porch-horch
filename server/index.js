@@ -3,9 +3,13 @@
 // This is the server.
 // This will take requests and talk to the tool.
 
+const os = require('os')
 const child_process = require('child_process')
 const path = require('path')
 const message = require('../message')
+const jsonrpc = require('../jsonrpc')
+
+
 
 const toolCommand = path.resolve(__dirname, '../tool/index.js')
 // const toolCommand = "ls"
@@ -19,15 +23,37 @@ const runTool = (input, done) => {
   tool.stderr.on('data', (data) => console.log(data.toString()))
   tool.on('exit', () => {
     const result = Buffer.concat(chunks)
-    done(result)
+    done(result.toString())
   })
 }
 
+const notify = (method, params) => {
+  process.stdout.write(
+    message(jsonrpc.notification(method, params))
+  )
+}
+
+const parseMessage = (string) => {
+  const parts = string.split(`${os.EOL}${os.EOL}`)
+  const headers = parts[0]
+  const content = JSON.parse(parts[1])
+  return {
+    headers,
+    content,
+  }
+}
+
 process.stdin.on('data', (data) => {
-  // I respond to anything.
-  const input = data.toString().trim()
+  const m = parseMessage(data.toString())
+  const method = m.content.method
+
+  switch (method) {
+    default:
+      console.log(`no handler for "${method}"`)
+  }
+
+  return
   runTool(input, (result) => {
-    const m = message(result.toString())
-    process.stdout.write(m)
+    notify('???', { message: result })
   })
 })
