@@ -33,18 +33,48 @@ const notify = (method, params) => {
   )
 }
 
+const pendingActions = {}
+
+const clearPendingAction = (id) => {
+  const [timeout] = pendingActions[id]
+  delete pendingActions[id]
+  clearTimeout(timeout)
+}
+
 const routes = {
-  'initialized': () => notify('initialized'),
+  'initialize': () => notify('initialized'),
+  '$/cancelRequest': (message) => {
+    const id = message.content.params.id
+    // Canceling an action tells it to stop and return what it has so far.  It
+    // must still return a result.
+    const [, x] = pendingActions[id]
+    x()
+  }
 }
 
 const defaultRoute = (message) => {
   console.log(`no handler for "${message.content.method}"`)
 }
 
+const wrapFunction = (m, id) => {
+  const method = m.content.method
+  const handler = routes[method] || defaultRoute
+  return () => {
+    handler(m)
+    if (id !== undefined) {
+      clearPendingAction(id)
+    }
+  }
+}
+
 process.stdin.on('data', (data) => {
   const m = message.parse(data.toString())
+  const id = m.content.id
+  const x = wrapFunction(m, id)
   const method = m.content.method
-  return setTimeout(() => {
-    (routes[method] || defaultRoute)(m)
-  }, 1000)
+  const wait = method === '$/cancelRequest' ? 0 : 1000
+  const timeout = setTimeout(() => x(), wait)
+  if (id !== undefined) {
+    pendingActions[id] = [timeout, x]
+  }
 })

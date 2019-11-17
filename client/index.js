@@ -68,6 +68,7 @@ const request = (method, params) => {
 }
 
 const startServer = () => {
+  // serverProcess = child_process.spawn('node', ['--inspect', serverPath])
   serverProcess = child_process.spawn(serverPath)
   console.log('> server started')
   serverProcess.stderr.pipe(process.stderr)
