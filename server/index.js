@@ -33,21 +33,18 @@ const notify = (method, params) => {
   )
 }
 
+const routes = {
+  'initialized': () => notify('initialized'),
+}
+
+const defaultRoute = (message) => {
+  console.log(`no handler for "${message.content.method}"`)
+}
+
 process.stdin.on('data', (data) => {
   const m = message.parse(data.toString())
   const method = m.content.method
-
-  switch (method) {
-    case 'initialize':
-      runTool('hello', (result) => {
-        setTimeout(() => {
-          notify('initialized')
-        }, 1000)
-      })
-      break
-
-    default:
-      console.log(`no handler for "${method}"`)
-  }
-
+  return setTimeout(() => {
+    (routes[method] || defaultRoute)(m)
+  }, 1000)
 })

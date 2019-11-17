@@ -15,19 +15,28 @@ let requestId = 0
 
 const EXIT = 'e'
 const CANCEL = 'c'
+const DCWF = 'dcwf'
+const DCWFI = 'dcwfi'
+const SYMBOL = 's'
+const EXECUTE = 'ex'
 
 const showHelp = () => console.log(
 `
 You can issue the following commands:
 
-* (s)tart server - start the LSP server
-* (st)op server - stop the server
-* (r)estart server
+CLIENT
+* (s) start server
+* (st) stop server
+* (r) restart server
 
-* (i)nitialize
-* (sh)utdoown
-* (${EXIT})xit
-* $/(${CANCEL})ancelRequest
+* (i) initialize
+* (sh) shutdoown
+* (${EXIT}) exit
+* (${CANCEL}) $/cancelRequest
+* (${DCWF}) workspace/didChangeWorkspaceFolders
+* (${DCWFI}) workspace/didChangeWatchedFiles
+* (${SYMBOL}) workspace/symbol
+* (${EXECUTE}) workspace/executeCommand
 `)
 
 const logMessage = (label) => (message) => {
@@ -99,21 +108,34 @@ const client = {
 }
 
 const server = {
-  initialize: () => {
-    return request('initialize')
-  },
+  initialize: () => request('initialize'),
 
-  shutdown: () => {
-    return request('shutdown')
-  },
+  shutdown: () => request('shutdown'),
 
-  exit: () => {
-  return notify('exit')
-  },
+  exit: () => notify('exit'),
 
-  cancel: () => {
-    return
-  }
+  cancel: () => notify('$/cancelRequest', {
+    id: requestId - 1,
+  }),
+
+  didChangeWorkspaceFolders: () => notify('workspace/didChangeWorkspaceFolders', {
+    event: {
+      added: [],
+      removed: [],
+    },
+  }),
+
+  didChangeWatchedFiles: () => notify('workspace/didChangeWatchedFiles', {
+    changes: [],
+  }),
+
+  symbol: () => request('workspace/symbol', {
+    query: 'foo',
+  }),
+
+  executeCommand: () => request('workspace/executeCommand', {
+    command: 'getFunky',
+  }),
 }
 
 const routes = {
@@ -124,6 +146,10 @@ const routes = {
   'sh': server.shutdown,
   [EXIT]: server.exit,
   [CANCEL]: server.cancel,
+  [DCWF]: server.didChangeWorkspaceFolders,
+  [DCWFI]: server.didChangeWatchedFiles,
+  [SYMBOL]: server.symbol,
+  [EXECUTE]: server.executeCommand,
 }
 
 process.stdin.on('data', (data) => {
