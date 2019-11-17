@@ -1,10 +1,7 @@
 #!/usr/bin/env node
 
 // This is the client.
-// IDE's would talk to this and it would talk to the server (via RPC-JSON).
 
-// In reality, the server should already be running.  This would be
-// coordinated by the editor.
 const child_process = require('child_process')
 const path = require('path')
 const message = require('../message')
@@ -15,14 +12,19 @@ const jsonrpc = require('../jsonrpc')
 const serverPath = path.resolve(__dirname, '../server/index.js')
 let server
 
+const EXIT = 'e'
+
 const showHelp = () => console.log(
 `
-  You can issue the following commands:
+You can issue the following commands:
 
 * (s)tart server - start the LSP server
 * (st)op server - stop the server
 * (r)estart server
+
 * (i)nitialize
+* (sh)utdoown
+* (${EXIT})xit
 `)
 
 const logMessage = (label) => (message) => {
@@ -72,36 +74,52 @@ const startServer = () => {
   })
 }
 
-process.stdin.on('data', (data) => {
-  switch(data.toString().trim()) {
-    case 's':
-      if (!server) {
-        startServer()
-      }
-      break
-
-    case 'st':
-      if (server) {
-        server.kill()
-      }
-      break
-
-    case 'r':
-      if (server) {
-        server.on('exit', () => {
-          startServer()
-        })
-        server.kill()
-      }
-      break
-
-    case 'i':
-      request('initialize')
-      break
-
-    default:
-      showHelp()
+const handleStartServer = () => {
+  if (!server) {
+    startServer()
   }
+}
+
+const handleStopServer = () => {
+  if (server) {
+    server.kill()
+  }
+}
+
+const handleRestartServer = () => {
+  if (server) {
+    server.on('exit', () => {
+      startServer()
+    })
+    server.kill()
+  }
+}
+
+const handleInitialize = () => {
+  return request('initialize')
+}
+
+const handleShutdown = () => {
+  return request('shutdown')
+}
+
+const handleExit = () => {
+  return notify('exit')
+}
+
+const routes = {
+  's': handleStartServer,
+  'st': handleStopServer,
+  'r': handleRestartServer,
+  'i': handleInitialize,
+  'sh': handleShutdown,
+  [EXIT]: handleExit,
+}
+
+process.stdin.on('data', (data) => {
+  const command = data.toString().trim()
+  return (routes[command] || showHelp)()
 })
 
+handleStartServer()
 showHelp()

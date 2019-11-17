@@ -41,8 +41,8 @@ process.stdin.on('data', (data) => {
     case 'initialize':
       runTool('hello', (result) => {
         setTimeout(() => {
-          notify('???', { message: result })
-        }, 3000)
+          notify('initialized')
+        }, 1000)
       })
       break
 
