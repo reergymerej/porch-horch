@@ -10,9 +10,11 @@ const jsonrpc = require('../jsonrpc')
 // Again, use spawn to separate Node relationship.  This could be on a remote
 // machine for all we care.
 const serverPath = path.resolve(__dirname, '../server/index.js')
-let server
+let serverProcess
+let requestId = 0
 
 const EXIT = 'e'
+const CANCEL = 'c'
 
 const showHelp = () => console.log(
 `
@@ -25,6 +27,7 @@ You can issue the following commands:
 * (i)nitialize
 * (sh)utdoown
 * (${EXIT})xit
+* $/(${CANCEL})ancelRequest
 `)
 
 const logMessage = (label) => (message) => {
@@ -37,8 +40,8 @@ const logInbound = logMessage('client <- server')
 const logOutbound = logMessage('client -> server')
 
 const sendMessage = (message) => {
-  if (server) {
-    server.stdin.write(message)
+  if (serverProcess) {
+    serverProcess.stdin.write(message)
     logOutbound(message)
   }
 }
@@ -49,8 +52,6 @@ const notify = (method, params) => {
   )
 }
 
-let requestId = 0
-
 const request = (method, params) => {
   sendMessage(
     message.stringify(jsonrpc.request(method, params, requestId++))
@@ -58,62 +59,71 @@ const request = (method, params) => {
 }
 
 const startServer = () => {
-  server = child_process.spawn(serverPath)
+  serverProcess = child_process.spawn(serverPath)
   console.log('> server started')
-  server.stderr.pipe(process.stderr)
-  server.stderr.on('data', (data) => {
+  serverProcess.stderr.pipe(process.stderr)
+  serverProcess.stderr.on('data', (data) => {
     console.error('> server error', { error: data.toString() })
   })
-  server.on('exit', (code) => {
-    server = null
+  serverProcess.on('exit', (code) => {
+    serverProcess = null
     console.log('> server exited', { code })
   })
 
-  server.stdout.on('data', (data) => {
+  serverProcess.stdout.on('data', (data) => {
     logInbound(data.toString())
   })
 }
 
-const handleStartServer = () => {
-  if (!server) {
-    startServer()
-  }
-}
-
-const handleStopServer = () => {
-  if (server) {
-    server.kill()
-  }
-}
-
-const handleRestartServer = () => {
-  if (server) {
-    server.on('exit', () => {
+const client = {
+  startServer: () => {
+    if (!serverProcess) {
       startServer()
-    })
-    server.kill()
-  }
+    }
+  },
+
+  stopServer: () => {
+    if (serverProcess) {
+      serverProcess.kill()
+    }
+  },
+
+  restartServer: () => {
+    if (serverProcess) {
+      serverProcess.on('exit', () => {
+        startServer()
+      })
+      serverProcess.kill()
+    }
+  },
 }
 
-const handleInitialize = () => {
-  return request('initialize')
-}
+const server = {
+  initialize: () => {
+    return request('initialize')
+  },
 
-const handleShutdown = () => {
-  return request('shutdown')
-}
+  shutdown: () => {
+    return request('shutdown')
+  },
 
-const handleExit = () => {
+  exit: () => {
   return notify('exit')
+  },
+
+  cancel: () => {
+    return
+  }
 }
 
 const routes = {
-  's': handleStartServer,
-  'st': handleStopServer,
-  'r': handleRestartServer,
-  'i': handleInitialize,
-  'sh': handleShutdown,
-  [EXIT]: handleExit,
+  's': client.startServer,
+  'st': client.stopServer,
+  'r': client.restartServer,
+  'i': server.initialize,
+  'sh': server.shutdown,
+  [EXIT]: server.exit,
+  [CANCEL]: server.cancel,
 }
 
 process.stdin.on('data', (data) => {
@@ -121,5 +131,5 @@ process.stdin.on('data', (data) => {
   return (routes[command] || showHelp)()
 })
 
-handleStartServer()
+client.startServer()
 showHelp()
